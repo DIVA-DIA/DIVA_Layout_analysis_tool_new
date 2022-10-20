@@ -31,17 +31,17 @@ def _create_class_layers(image_array: np.ndarray, color_map: Dict[str, List[int]
     return class_layers
 
 
-def fix_color_table(img, output_path: Path, color_encoding: Dict[str, Tuple[List[int], int]]):
+def fix_color_table(img, color_encoding: Dict[str, Tuple[List[int], int]]):
     img_array_2d = np.asarray(img)
     img_array_3d = np.asarray(img.convert(mode='RGB'))
     new_img_array = np.empty(shape=img_array_2d.shape, dtype=np.uint8)
     # set max of np.unit8(255) to have error check
     new_img_array[:] = 255
-    class_masks = _create_class_layers(img_array_3d, COLOR_DICTIONARY)
+    class_masks = _create_class_layers(img_array_3d, color_encoding)
     for class_index, class_mask in class_masks.items():
         new_img_array[class_mask] = class_index
     new_img = Image.fromarray(new_img_array, mode='P')
-    new_img.putpalette(_create_pillow_color_table(COLOR_DICTIONARY))
+    new_img.putpalette(_create_pillow_color_table(color_encoding))
     return new_img
 
 
@@ -53,7 +53,7 @@ def main(folder_path: Path, output_path: Path, color_encoding: Dict[str, Tuple[L
 
     for img_path in tqdm(list(folder_path.glob('*.gif'))):
         img = Image.open(img_path)
-        fixed_img = fix_color_table(img, output_path, color_encoding)
+        fixed_img = fix_color_table(img, color_encoding)
         fixed_img.save(output_path / img_path.name)
 
     with open(output_path / 'class_encoding.json', 'w') as f:
