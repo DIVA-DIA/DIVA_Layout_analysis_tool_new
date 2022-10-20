@@ -57,7 +57,7 @@ def main(folder_path: Path, output_path: Path, color_encoding: Dict[str, Tuple[L
         fixed_img.save(output_path / img_path.name)
 
     with open(output_path / 'class_encoding.json', 'w') as f:
-        json.dump(COLOR_DICTIONARY, fp=f)
+        json.dump(color_encoding, fp=f)
 
 
 if __name__ == '__main__':
