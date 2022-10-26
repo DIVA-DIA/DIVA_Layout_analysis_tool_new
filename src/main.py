@@ -58,7 +58,9 @@ def fix_color_table(img, color_encoding: Dict[str, Tuple[List[int], int]]):
 
 
 def main(pred_folder_path: Path, gt_folder_path: Path):
-    pred_gt_list = zip(sorted(list(pred_folder_path.iterdir())), sorted(list(gt_folder_path.iterdir())))
+    pred_files = sorted(list(pred_folder_path.glob('*.gif')))
+    gt_files = sorted(list(gt_folder_path.glob('*.gif')))
+    pred_gt_list = zip(pred_files, gt_files)
 
     i = 0
     pred_list = []
