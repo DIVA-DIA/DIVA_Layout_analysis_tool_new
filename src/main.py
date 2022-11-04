@@ -57,7 +57,7 @@ def fix_color_table(img, color_encoding: Dict[str, Tuple[List[int], int]]):
     return new_img
 
 
-def main(pred_folder_path: Path, gt_folder_path: Path):
+def evaluate_folder(pred_folder_path: Path, gt_folder_path: Path):
     pred_files = sorted(list(pred_folder_path.glob('*.gif')))
     gt_files = sorted(list(gt_folder_path.glob('*.gif')))
     pred_gt_list = zip(pred_files, gt_files)
@@ -120,6 +120,8 @@ def main(pred_folder_path: Path, gt_folder_path: Path):
     with (pred_folder_path / 'metrics.json').open('w') as f:
         json.dump(result, f, indent=2)
 
+    return result
+
 
 if __name__ == '__main__':
     CLASSES = ['bg', 'line', 'hline', 'gline']
@@ -129,5 +131,23 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--gt_folder_path', type=Path, required=True)
     args = parser.parse_args()
 
-    main(**args.__dict__)
-    pass
+    if args.pred_folder_path.is_file():
+        output_file_path = args.pred_folder_path.parent / (args.pred_folder_path.stem + '_metrics.csv')
+        with output_file_path.open('w') as f:
+            f.write('experiment_name,date,time,experiment_path,jaccard_mean,precision,recall,f1-score\n')
+        with args.pred_folder_path.open('r') as f:
+            lines = f.readlines()
+            for line in lines:
+                line_path = Path(line.strip())
+                summary = evaluate_folder(line_path / 'test_output' / 'pred', args.gt_folder_path)
+                experiment_name = line_path.parents[1].stem
+                date = line_path.parent.stem
+                time = line_path.stem
+                jaccard_m = summary['jaccard_mean']
+                precision = summary['classification_report']['macro avg']['precision']
+                recall = summary['classification_report']['macro avg']['recall']
+                f1_score = summary['classification_report']['macro avg']['f1-score']
+                with output_file_path.open('a') as f:
+                    f.write(f'{experiment_name},{date},{time},{line_path.absolute()},{jaccard_m},{precision},{recall},{f1_score}\n')
+    else:
+        evaluate_folder(**args.__dict__)
