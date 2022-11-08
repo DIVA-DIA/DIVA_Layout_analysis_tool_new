@@ -37,8 +37,7 @@ def _create_pillow_color_table(color_dict: Dict[str, Tuple[List[int], int]]) -> 
 def _create_class_layers(image_array: np.ndarray, color_map: Dict[str, List[int]]) -> Dict[int, np.ndarray]:
     class_layers = {}
     for class_name, class_color_index in color_map.items():
-        class_layers[class_color_index[1]] = np.asarray(
-            [[all(cell == class_color_index[0]) for cell in row] for row in image_array])
+        class_layers[class_color_index[1]] = np.all(image_array == np.asarray(class_color_index[0]), axis=-1)
 
     return class_layers
 
