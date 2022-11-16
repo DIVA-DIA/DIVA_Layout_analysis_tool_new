@@ -15,18 +15,19 @@ COLOR_DICTIONARY = {"Background": ([0, 0, 0], 0),
 
 
 def _create_pillow_color_table(color_dict: Dict[str, Tuple[List[int], int]]) -> List[int]:
-    color_table = []
+    color_table = [0] * 768
     for name, color_and_index in color_dict.items():
         color, index = color_and_index
-        color_table.extend(color)
+        color_table[index * 3] = color[0]
+        color_table[index * 3 + 1] = color[1]
+        color_table[index * 3 + 2] = color[2]
     return color_table
 
 
 def _create_class_layers(image_array: np.ndarray, color_map: Dict[str, List[int]]) -> Dict[int, np.ndarray]:
     class_layers = {}
     for class_name, class_color_index in color_map.items():
-        class_layers[class_color_index[1]] = np.asarray(
-            [[all(cell == class_color_index[0]) for cell in row] for row in image_array])
+        class_layers[class_color_index[1]] = np.all(image_array == np.asarray(class_color_index[0]), axis=-1)
 
     return class_layers
 
@@ -68,4 +69,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--color_encoding', type=Path, required=False, default=None,
                         help='Path to the color encoding json file')
     args = parser.parse_args()
-    main(**args.__dict__)
+    for s in ['val']: #['train', 'training-10', 'training-20', 'training-40', 'validation', 'test', 'val']:
+        # /Users/voegtlil/Documents/04_Datasets/synthetic_data/dummy_120training+40validation/test/gt
+        main(args.folder_path / s / 'gt', args.output_path / s / 'gt' / 'cor', color_encoding=None)
+
