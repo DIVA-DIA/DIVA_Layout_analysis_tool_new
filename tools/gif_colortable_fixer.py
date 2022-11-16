@@ -69,7 +69,5 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--color_encoding', type=Path, required=False, default=None,
                         help='Path to the color encoding json file')
     args = parser.parse_args()
-    for s in ['val']: #['train', 'training-10', 'training-20', 'training-40', 'validation', 'test', 'val']:
-        # /Users/voegtlil/Documents/04_Datasets/synthetic_data/dummy_120training+40validation/test/gt
-        main(args.folder_path / s / 'gt', args.output_path / s / 'gt' / 'cor', color_encoding=None)
 
+    main(**args.__dict__)
