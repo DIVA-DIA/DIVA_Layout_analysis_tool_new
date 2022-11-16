@@ -8,7 +8,7 @@ from matplotlib.patches import Rectangle
 import seaborn as sn
 from PIL import Image
 import numpy as np
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import confusion_matrix, classification_report, jaccard_score
 from tqdm import tqdm
 
 COLOR_DICTIONARY = {"Background": ([0, 0, 0], 0),
@@ -74,19 +74,21 @@ def evaluate_folder(pred_folder_path: Path, gt_folder_path: Path):
             gt_img = fix_color_table(gt_img, color_encoding=COLOR_DICTIONARY)
 
         if i == 0:
-            pred_list = np.asarray(pred_img)
-            gt_list = np.asarray(gt_img)
+            pred_list.append(np.asarray(pred_img).flatten())
+            gt_list.append(np.asarray(gt_img).flatten())
         else:
-            pred_list = np.concatenate((np.asarray(pred_img), pred_list))
-            gt_list = np.concatenate((np.asarray(gt_img), gt_list))
+            pred_list.append(np.asarray(pred_img).flatten())
+            gt_list.append(np.asarray(gt_img).flatten())
 
         i += 1
 
-    pred_list = pred_list.flatten()
-    gt_list = gt_list.flatten()
+    pred_list = np.asarray(pred_list)
+    gt_list = np.asarray(gt_list)
+    pred_list_flatten = pred_list.flatten()
+    gt_list_flatten = gt_list.flatten()
 
-    conf_mat = confusion_matrix(gt_list, pred_list)
-    conf_mat_norm = confusion_matrix(gt_list, pred_list, normalize='true')
+    conf_mat = confusion_matrix(gt_list_flatten, pred_list_flatten)
+    conf_mat_norm = confusion_matrix(gt_list_flatten, pred_list_flatten, normalize='true')
 
     plt.figure(figsize=(14, 8))
     # set labels size
@@ -110,11 +112,17 @@ def evaluate_folder(pred_folder_path: Path, gt_folder_path: Path):
     B = conf_mat.sum(0)
     jaccard = A_inter_B / (A + B - A_inter_B)
 
+    score_per_sample = []
+    for p, g in zip(pred_list, gt_list):
+        score_per_sample.append(jaccard_score(y_true=g, y_pred=p, average='macro'))
+
     result = {'conf_mat': conf_mat.tolist(),
               'class_accuracy': class_accuracy.tolist(),
               'jaccard': jaccard.tolist(),
-              'jaccard_mean': jaccard.mean().tolist(),
-              'classification_report': classification_report(gt_list, pred_list, target_names=CLASSES, output_dict=True),
+              'jaccard_macro': jaccard_score(y_pred=pred_list_flatten, y_true=gt_list_flatten, average='macro'),
+              'jaccard_mean': np.asarray(score_per_sample).mean(),
+              'classification_report': classification_report(gt_list_flatten, pred_list_flatten, target_names=CLASSES,
+                                                             output_dict=True),
               }
     with (pred_folder_path / 'metrics.json').open('w') as f:
         json.dump(result, f, indent=2)
@@ -133,7 +141,7 @@ if __name__ == '__main__':
     if args.pred_folder_path.is_file():
         output_file_path = args.pred_folder_path.parent / (args.pred_folder_path.stem + '_metrics.csv')
         with output_file_path.open('w') as f:
-            f.write('experiment_name,date,time,experiment_path,jaccard_mean,precision,recall,f1-score\n')
+            f.write('experiment_name,date,time,experiment_path,jaccard_macro,jaccard_mean,precision,recall,f1-score\n')
         with args.pred_folder_path.open('r') as f:
             lines = f.readlines()
             for line in lines:
@@ -142,11 +150,14 @@ if __name__ == '__main__':
                 experiment_name = line_path.parents[1].stem
                 date = line_path.parent.stem
                 time = line_path.stem
-                jaccard_m = summary['jaccard_mean']
+                jaccard_macro = summary['jaccard_macro']
+                jaccard_mean = summary['jaccard_mean']
                 precision = summary['classification_report']['macro avg']['precision']
                 recall = summary['classification_report']['macro avg']['recall']
                 f1_score = summary['classification_report']['macro avg']['f1-score']
                 with output_file_path.open('a') as f:
-                    f.write(f'{experiment_name},{date},{time},{line_path.absolute()},{jaccard_m},{precision},{recall},{f1_score}\n')
+                    f.write(
+                        f'{experiment_name},{date},{time},{line_path.absolute()},{jaccard_macro},{jaccard_mean},{precision},{recall},{f1_score}\n')
     else:
-        evaluate_folder(**args.__dict__)
+        sum = evaluate_folder(**args.__dict__)
+        print(f"{sum['jaccard_mean']}, {sum['jaccard_macro']}, {sum['classification_report']['macro avg']['precision']}, {sum['classification_report']['macro avg']['recall']}, {sum['classification_report']['macro avg']['f1-score']}")
