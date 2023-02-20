@@ -130,21 +130,10 @@ def evaluate_folder_list(method_eval_path: Path, gt_folder_path: Path, mean_path
                          method_name: str,
                          nbr_files: int):
     # get an eval file from the folder
-    t5 = method_eval_path / 'training-5'
-    t10 = method_eval_path / 'training-10'
-    t20 = method_eval_path / 'training-20'
 
-    t5_files = [[file for file in folder.glob('*.txt') if "rolf" in file.name] for folder in t5.iterdir() if
-                folder.is_dir()]
-    t10_files = [[file for file in folder.glob('*.txt') if "rolf" in file.name] for folder in t10.iterdir() if
-                 folder.is_dir()]
-    t20_files = [[file for file in folder.glob('*.txt') if "rolf" in file.name] for folder in t20.iterdir() if
-                 folder.is_dir()]
+    txt_files = [list(folder.glob('*.txt')) for folder in method_eval_path.iterdir() if folder.is_dir()]
 
-    t5_files.extend(t10_files)
-    t5_files.extend(t20_files)
-
-    for exp in t5_files:
+    for exp in txt_files:
         with exp[0].open('r') as f:
             lines = f.readlines()
             results = []
@@ -167,8 +156,6 @@ def evaluate_folder_list(method_eval_path: Path, gt_folder_path: Path, mean_path
                 [str(x) for x in trimmed_per_page])
             f.write(stats_str[:-1] + '\n')
 
-        pass
-    pass
 
 
 if __name__ == '__main__':
@@ -178,6 +165,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--method_eval_path', type=Path, required=True,
                         help='e.g., /net/research-hisdoc/experiments_lars_paul/evaluations/icdar/sauvola/no_pretrain/unet')
+    parser.add_argument('-o', '--output_folder_path', type=Path, required=True)
     parser.add_argument('-g', '--gt_folder_path', type=Path, required=True)
     parser.add_argument('-n', '--method_name', type=str, required=True)
     args = parser.parse_args()
@@ -185,11 +173,13 @@ if __name__ == '__main__':
     if args.method_eval_path.is_file():
         raise ValueError("pred_folder_path must be a folder!")
 
-    statistic_file_path_median = args.method_eval_path.parent.parent / 'statistics' / f'{args.method_name}_median_statistics.csv'
-    statistic_file_path_mean = args.method_eval_path.parent.parent / 'statistics' / f'{args.method_name}_mean_statistics.csv'
+    statistic_file_path_median = args.output_folder_path / 'statistics' / f'{args.method_name}_median_statistics.csv'
+    statistic_file_path_mean = args.output_folder_path / 'statistics' / f'{args.method_name}_mean_statistics.csv'
     file_list = sorted([i.stem for i in args.gt_folder_path.glob('*.gif')])
     nbr_files = len(file_list)
     file_str = ','.join(file_list)
+    statistic_file_path_median.parent.mkdir(parents=True, exist_ok=True)
+    statistic_file_path_mean.parent.mkdir(parents=True, exist_ok=True)
     if not statistic_file_path_median.exists():
         with statistic_file_path_mean.open('w') as f:
             f.write(f'method_name,epochs,training,{file_str[:-1]}\n')
