@@ -26,6 +26,7 @@ if __name__ == '__main__':
     trainings = ['training-20', 'training-10', 'training-5']
     pre_train_epochs = ['10', '20', '30', '40', '50']
 
+    t_test_path.parent.mkdir(parents=True, exist_ok=True)
     with t_test_path.open('w') as f:
         f.write('training,epochs,t,p\n')
 
@@ -48,6 +49,6 @@ if __name__ == '__main__':
     for baseline in baselines:
         experiments = [e for e in exp if e.training == baseline.training]
         for e in experiments:
-            t_test = stats.ttest_ind(baseline.page_values, e.page_values)
+            t_test = stats.wilcoxon(baseline.page_values, e.page_values)
             with t_test_path.open('a') as f:
                 f.write(f'{e.training},{e.epochs},{t_test[0]},{t_test[1]}\n')
